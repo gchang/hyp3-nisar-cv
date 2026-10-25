@@ -20,6 +20,12 @@ The README said `--water-threshold-db` defaults to `16.5`; the code's default (`
 
 With `--save-gcovs true`, `process_cv` wrote one GeoTIFF per input granule but left it out of `result.outputs`, so a HyP3 job that asked for the layers never got them back (only files in the bucket leave the container). The saved layers now follow the products in `result.outputs` and are uploaded with them. Without `--save-gcovs` nothing changes. Products do not change.
 
+## 2026-10-25: an Earthdata Login token in `EARTHDATA_TOKEN`
+
+`gcov.earthdata_session()` could only log in with the username and password in `~/.netrc`. A platform that runs jobs on a user's behalf, such as NASA MAAP, can give the job that user's Earthdata Login token instead, and a token is safer to put in a job than a password. When `EARTHDATA_TOKEN` is set and not empty, the session now authenticates with `asf_search`'s `ASFSession().auth_with_token()`; otherwise it reads `~/.netrc` exactly as before. The granule downloads (`gcov.download_granule`, `ASFProduct.download`) use that same session, and the search needs no login, so this is the only change; nothing uses earthaccess or fsspec. If Earthdata Login rejects the token, the run stops with an `ASFAuthenticationError` that names `EARTHDATA_TOKEN`, and it does not fall back to `~/.netrc`. The variable name is the one burst2safe (ASFHyP3/burst2safe) reads. The README's credentials note has one line about it, and `tests/test_auth.py` covers both paths and a rejected token without network access. Products do not change.
+
+Checked on 2026-10-25 from a clone tagged `v0.1.0.post2` (same env versions as below): `pytest` passes 4 tests (2 of them fail on the previous commit), ruff and mypy pass. The README example with `--crop-area true --save-gcovs true` and no token (the `~/.netrc` path) gives CV, CV_100m, NVALID, WATER and CROP_100m that are pixel-identical to the previous version's code replayed on the same layers, with the same numbers as below. The same run with a real token in `EARTHDATA_TOKEN` and `~/.netrc` hidden gives byte-identical files. A made-up token stops in about 3 s with the authentication error, before any download.
+
 ## Check
 
 On 2026-10-25, in a fresh conda env built from `environment.yml` (Python 3.14.9, GDAL 3.13.3, numpy 2.5.4, h5py 3.16.0, asf_search 14.0.4), from a clone tagged `v0.1.0.post1`:
