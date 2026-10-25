@@ -12,18 +12,18 @@ The README said `--water-threshold-db` defaults to `16.5`; the code's default (`
 
 `process_crop_area` wrote `_WATER.tif` and `_CROP_100m.tif` but returned them as a separate list that `main()` discarded, so `--bucket` uploaded only the CV, CV_100m and NVALID files and the crop area product never reached the bucket. `process_crop_area` now adds its files to `result.outputs` and returns the result. This is upstream's own fix from its develop branch (commits b62f7a9b29235cacec28ef279a60bb58a31e66db and 2bd60c320780f7a5543cca5831ad78dd78ea5503, merged 2026-10-21; upstream's changelog lists it under 0.1.1, not yet tagged). Products do not change.
 
-## 2026-10-25: the version comes from the git tag
-
-`pyproject.toml` declared the version as dynamic but did not list `setuptools_scm` as a build requirement or configure it, so every install reported `0.0.0`, even from the tagged release. `setuptools_scm>=8` is now a build requirement with a `[tool.setuptools_scm]` table, so `nisar_cv.__version__` carries the tag (for example `0.1.0.post1`) and a dev version between tags. A copy without git metadata, such as a source archive, still installs and reports `0.0.0`.
-
 ## 2026-10-25: `--bucket` uploads the saved GCOV layers too
 
 With `--save-gcovs true`, `process_cv` wrote one GeoTIFF per input granule but left it out of `result.outputs`, so a HyP3 job that asked for the layers never got them back (only files in the bucket leave the container). The saved layers now follow the products in `result.outputs` and are uploaded with them. Without `--save-gcovs` nothing changes. Products do not change.
+
+## 2026-10-25: two earlier changes taken out again
+
+Tags `v0.1.0.post1` and `v0.1.0.post2` also carried two changes that do not affect whether the program runs or what it computes: the package version read from the git tag with setuptools_scm, and (in post2) an Earthdata Login token read from `EARTHDATA_TOKEN`. Both are removed here. The package version is set the authors' way again (it reports `0.0.0`), and the download session logs in only with the Earthdata username and password in `~/.netrc`, as upstream does.
 
 ## Check
 
 On 2026-10-25, in a fresh conda env built from `environment.yml` (Python 3.14.9, GDAL 3.13.3, numpy 2.5.4, h5py 3.16.0, asf_search 14.0.4), from a clone tagged `v0.1.0.post1`:
 
-- `nisar_cv.__version__` is `0.1.0.post1`. `ruff check src`, `ruff format --check src` and `mypy src` pass. There are no tests yet.
+- `ruff check src`, `ruff format --check src` and `mypy src` pass. There are no tests yet.
 - The README example (four GCOV granules, track 148 frame 24, the README subset) with `--crop-area true --save-gcovs true --bucket nisar-cv-test --bucket-prefix check`, against a local S3 mock (moto server on localhost, dummy keys): exit 0, 1 min 50 s, 355 MB peak memory, 8.6 GB downloaded. All nine files written (CV, CV_100m, NVALID, WATER, CROP_100m and the four layers) are in the bucket, byte for byte the same as the local files and tagged `file_type=product`.
 - Products are the same as before: replaying the unchanged v0.1.0 code and this copy on the same four saved layers gives pixel-identical CV, CV_100m, NVALID, WATER and CROP_100m files with the same grids, and a plain numpy recompute of the CV from the layers matches to 7e-6 relative (3,492,860 pixels; water 38,305 pixels; crop area classes 91.6% non-crop, 7.4% crop, 1.1% water).
