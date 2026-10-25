@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import netrc
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +17,7 @@ OUTPUT_DIR = Path("output")
 GCOV_GRID_PATH = "science/LSAR/GCOV/grids/frequencyA"
 GCOV_MASK_FILL = 255  # mask: 0 = partially focused or invalid (incl. transmit gaps), 255 = outside acquisition
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
+TOKEN_ENV_VAR = "EARTHDATA_TOKEN"
 
 
 @dataclass(frozen=True)
@@ -58,7 +60,22 @@ class Grid:
 
 
 def earthdata_session() -> asf.ASFSession:
-    """ASF session authenticated with the Earthdata Login credentials in ~/.netrc."""
+    """ASF session authenticated with Earthdata Login.
+
+    Uses the EDL user token in the EARTHDATA_TOKEN environment variable when it is set and not
+    empty, otherwise the urs.earthdata.nasa.gov credentials in ~/.netrc. The same session is
+    used for the downloads.
+    """
+    token = os.getenv(TOKEN_ENV_VAR)
+    if token:
+        try:
+            return asf.ASFSession().auth_with_token(token)
+        except asf.ASFAuthenticationError as e:
+            raise asf.ASFAuthenticationError(
+                f"Earthdata Login did not accept the token in {TOKEN_ENV_VAR} ({e}). "
+                f"Renew it, or unset {TOKEN_ENV_VAR} to use ~/.netrc instead."
+            ) from e
+
     credentials = netrc.netrc().authenticators(EARTHDATA_HOST)
     if credentials is None:
         raise ValueError(f"No {EARTHDATA_HOST} entry in ~/.netrc")

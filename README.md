@@ -37,6 +37,7 @@ If you do not already have an Earthdata account, you can sign up [here](https://
 Your credentials can be passed to the workflows via environment variables
 (`EARTHDATA_USERNAME`, `EARTHDATA_PASSWORD`) or via your `.netrc` file. If you haven't set up a `.netrc` file
 before, check out this [guide](https://harmony.earthdata.nasa.gov/docs#getting-started) to get started.
+You can instead set `EARTHDATA_TOKEN` to an Earthdata Login [user token](https://urs.earthdata.nasa.gov/user_tokens); when it is set, it is used in place of `.netrc`.
 
 
 ## License
